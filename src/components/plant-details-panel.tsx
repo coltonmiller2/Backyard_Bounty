@@ -38,6 +38,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { AITreatmentSuggestion } from './ai-suggestion';
 
 
 interface PlantDetailsPanelProps {
@@ -83,9 +84,9 @@ const EditRecordModal: React.FC<{
     const form = useForm<z.infer<typeof recordFormSchema>>({
         resolver: zodResolver(recordFormSchema),
         defaultValues: {
-            phLevel: '',
-            moistureLevel: '',
-            trunkDiameter: '',
+            phLevel: record.phLevel || '',
+            moistureLevel: record.moistureLevel || '',
+            trunkDiameter: record.trunkDiameter || '',
         }
     });
     
@@ -332,7 +333,7 @@ export function PlantDetailsPanel({ plant, category, onClose, onAddRecord, onUpd
 
           <ScrollArea className="flex-1">
             <div className="p-4 space-y-6">
-                <Accordion type="single" collapsible>
+                <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="item-1" className="border-b-0">
                         <AccordionTrigger className="text-base font-semibold">
                             New Record, Soil Test, or Suggestion
@@ -368,7 +369,7 @@ export function PlantDetailsPanel({ plant, category, onClose, onAddRecord, onUpd
                                 </Form>
                                 </CardContent>
                             </Card>
-                            {/* <AITreatmentSuggestion plant={plant} /> */}
+                            <AITreatmentSuggestion plant={plant} />
                         </AccordionContent>
                     </AccordionItem>
                 </Accordion>
@@ -481,3 +482,5 @@ export function PlantDetailsPanel({ plant, category, onClose, onAddRecord, onUpd
     </div>
   );
 }
+
+    

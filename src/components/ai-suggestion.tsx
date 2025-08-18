@@ -23,9 +23,10 @@ export function AITreatmentSuggestion({ plant }: AITreatmentSuggestionProps) {
     setLoading(true);
     setSuggestion(null);
 
-    const latestRecord = plant.records.length > 0 ? plant.records[0] : null;
+    const latestRecord = plant.records[0];
 
-    if (!latestRecord || (!latestRecord.phLevel && !latestRecord.moistureLevel)) {
+    // This check is now more robust because we guard the component from rendering if there's no latestRecord
+    if (!latestRecord.phLevel && !latestRecord.moistureLevel) {
       toast({
         variant: "destructive",
         title: "Missing Data",
@@ -56,6 +57,11 @@ export function AITreatmentSuggestion({ plant }: AITreatmentSuggestionProps) {
 
     setLoading(false);
   };
+  
+  // Guard Clause: Don't render anything if there are no records.
+  if (!plant || plant.records.length === 0) {
+    return null;
+  }
 
   return (
     <Card>
@@ -93,3 +99,5 @@ export function AITreatmentSuggestion({ plant }: AITreatmentSuggestionProps) {
     </Card>
   );
 }
+
+    
