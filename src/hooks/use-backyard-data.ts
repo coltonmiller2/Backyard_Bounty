@@ -4,8 +4,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { initialData } from '@/lib/initial-data';
 import type { BackyardLayout, Plant, Record as PlantRecord, PlantCategory } from '@/lib/types';
-
-const STORAGE_KEY = 'backyardBountyData';
+import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import firebaseApp from '../lib/firebaseConfig';
 
 function fileToDataUri(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -24,42 +25,49 @@ function isPlantCategory(value: any): value is PlantCategory {
 export function useBackyardData() {
   const [layout, setLayout] = useState<BackyardLayout | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  
+  const db = getFirestore(firebaseApp);
+  const auth = getAuth(firebaseApp);
 
   useEffect(() => {
-    try {
-      const storedDataJSON = localStorage.getItem(STORAGE_KEY);
-      if (storedDataJSON) {
-        const storedData: BackyardLayout = JSON.parse(storedDataJSON);
-        // Version check
-        if (storedData.version === initialData.version) {
-          setLayout(storedData);
-        } else {
-          // Version mismatch, use initialData and update localStorage
-          setLayout(initialData);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
+    const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
+      if (user) {
+        try {
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+
+          if (userDocSnap.exists()) {
+            setLayout(userDocSnap.data() as BackyardLayout);
+          } else {
+            setLayout(initialData);
+            await setDoc(userDocRef, initialData);
+          }
+        } catch (err: any) {
+          setError(err);
         }
       } else {
-        // No data in localStorage, use initialData
-        setLayout(initialData);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
+        setLayout(null); // User is signed out
       }
-    } catch (error) {
-      console.error("Failed to access localStorage or parse data:", error);
-      // Fallback to initialData
-      setLayout(initialData);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      setLoading(false); // Set loading to false after auth state is determined and data is potentially loaded
+    });
+    return () => unsubscribe();
+  }, [auth, db]);
 
-  const updateLayout = useCallback((newLayout: BackyardLayout) => {
+  const updateLayout = useCallback(async (newLayout: BackyardLayout) => {
     setLayout(newLayout);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newLayout));
-    } catch (error) {
-      console.error("Failed to save data to localStorage:", error);
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        await setDoc(userDocRef, newLayout);
+      } catch (err: any) {
+        setError(err);
+      }
+    } else {
+      console.error("Cannot save data: User not signed in.");
     }
-  }, []);
+  }, [auth, db]);
 
   const updatePlantPosition = useCallback((plantId: string, newPosition: { x: number; y: number }) => {
     if (!layout) return;
@@ -185,7 +193,7 @@ export function useBackyardData() {
     const newLayout = structuredClone(layout);
 
     if (photoFile) {
-        updatedRecord.photoDataUri = await fileToDataUri(photoFile);
+      updatedRecord.photoDataUri = await fileToDataUri(photoFile);
     }
 
     for (const categoryKey in newLayout) {
@@ -241,5 +249,5 @@ export function useBackyardData() {
   }, [layout, updateLayout]);
 
 
-  return { layout, loading, updatePlantPosition, addPlant, removePlant, addRecordToPlant, addRecordToPlants, updateRecordInPlant, updatePlant, deleteRecordFromPlant };
+  return { layout, loading, error, updatePlantPosition, addPlant, removePlant, addRecordToPlant, addRecordToPlants, updateRecordInPlant, updatePlant, deleteRecordFromPlant };
 }
