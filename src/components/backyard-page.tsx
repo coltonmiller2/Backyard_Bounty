@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { Leaf, Plus, Map, Table } from 'lucide-react';
+import { Leaf, Plus, Map, Table, LogOut } from 'lucide-react';
 import { useBackyardData } from '@/hooks/use-backyard-data';
 import type { Plant, PlantCategory, Record as PlantRecord, BackyardLayout } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,9 @@ import { TableView } from '@/components/table-view';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { BulkUpdatePanel } from '@/components/bulk-update-panel';
+import { getAuth, signOut } from 'firebase/auth';
+import firebaseApp from '@/lib/firebaseConfig';
+
 
 function isPlantCategory(value: any): value is PlantCategory {
     return value && typeof value === 'object' && 'name' in value && 'color' in value && Array.isArray(value.plants);
@@ -41,12 +44,9 @@ export function BackyardPage() {
 
   const allPlants = useMemo(() => {
     if (!layout) return [];
-    // --- THIS IS THE CORRECTED SECTION ---
-    // We apply the filter again here to satisfy the strict TypeScript build process.
     return Object.values(filteredLayout)
       .filter(isPlantCategory)
       .flatMap(category => category.plants);
-    // --- END OF CORRECTION ---
   }, [layout, filteredLayout]);
 
   const selectedPlants = useMemo(() => {
@@ -113,6 +113,16 @@ export function BackyardPage() {
     updatePlant(plantId, updates);
   };
 
+  const handleLogout = async () => {
+    const auth = getAuth(firebaseApp);
+    try {
+      await signOut(auth);
+      // The onAuthStateChanged listener in page.tsx will handle redirecting to the login page.
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   const showDetailsPanel = selectedPlants.length === 1;
   const showBulkUpdatePanel = selectedPlants.length > 1;
   const showRightPanel = showDetailsPanel || showBulkUpdatePanel;
@@ -152,6 +162,9 @@ export function BackyardPage() {
             </Button>
             <Button onClick={() => setAddModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" /> Add Plant
+            </Button>
+            <Button variant="outline" size="icon" onClick={handleLogout}>
+              <LogOut className="h-4 w-4" />
             </Button>
         </div>
       </header>

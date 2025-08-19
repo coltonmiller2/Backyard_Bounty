@@ -2,8 +2,9 @@
 
 import { BackyardPage } from '@/components/backyard-page';
 import firebaseApp from '../lib/firebaseConfig';
-import { getAuth, User, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, signOut } from 'firebase/auth';
+import { getAuth, User, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
 import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -11,10 +12,11 @@ export default function Home() {
   const auth = getAuth(firebaseApp);
 
   useEffect(() => {
-    onAuthStateChanged(auth, (user: User | null) => {
+    const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
       setUser(user);
       setLoading(false);
     });
+    return () => unsubscribe();
   }, [auth]);
 
   const handleLogin = async () => {
@@ -26,32 +28,27 @@ export default function Home() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
-
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+        <div className="flex items-center justify-center h-screen">
+            <div className="text-center">
+                <p>Loading...</p>
+            </div>
+        </div>
+    );
   }
 
-  if (user && user.email === 'coltonmiller2@gmail.com') {
-    return (
-      <div>
-        <button onClick={handleLogout}>Logout</button>
-        <BackyardPage />
-      </div>
-    );
-  } else {
-    return (
-      <div>
-        <h1>Welcome to Backyard Bounty</h1>
-        <p>Please sign in to continue.</p>
-        <button onClick={handleLogin}>Sign in with Google</button>
-      </div>
-    );
+  if (user) {
+    return <BackyardPage />;
   }
+
+  return (
+    <div className="flex items-center justify-center h-screen bg-background">
+        <div className="text-center p-8 border rounded-lg shadow-lg">
+            <h1 className="text-2xl font-bold mb-4">Welcome to Backyard Bounty</h1>
+            <p className="text-muted-foreground mb-6">Please sign in to continue.</p>
+            <Button onClick={handleLogin} size="lg">Sign in with Google</Button>
+        </div>
+    </div>
+  );
 }
