@@ -5,7 +5,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { initialData } from '@/lib/initial-data';
 import type { BackyardLayout, Plant, Record as PlantRecord, PlantCategory } from '@/lib/types';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseApp from '../lib/firebaseConfig';
 
 function fileToDataUri(file: File): Promise<string> {
@@ -21,6 +20,8 @@ function isPlantCategory(value: any): value is PlantCategory {
     return value && typeof value === 'object' && 'name' in value && 'color' in value && Array.isArray(value.plants);
 }
 
+// NOTE: This is a temporary hardcoded user ID for development without authentication.
+const HARDCODED_USER_ID = "_backyard_bounty_preview_user";
 
 export function useBackyardData() {
   const [layout, setLayout] = useState<BackyardLayout | null>(null);
@@ -28,47 +29,41 @@ export function useBackyardData() {
   const [error, setError] = useState<Error | null>(null);
   
   const db = getFirestore(firebaseApp);
-  const auth = getAuth(firebaseApp);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
-      if (user?.uid) {
+    const loadData = async () => {
+        setLoading(true);
         try {
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDocSnap = await getDoc(userDocRef);
+            const userDocRef = doc(db, 'users', HARDCODED_USER_ID);
+            const userDocSnap = await getDoc(userDocRef);
 
-          if (userDocSnap.exists()) {
-            setLayout(userDocSnap.data() as BackyardLayout);
-          } else { 
-             await setDoc(userDocRef, initialData);
-             setLayout(initialData);
-          }
+            if (userDocSnap.exists()) {
+                setLayout(userDocSnap.data() as BackyardLayout);
+            } else { 
+                await setDoc(userDocRef, initialData);
+                setLayout(initialData);
+            }
         } catch (err: any) {
-          console.error('Error fetching or setting user data:', err); 
-          setError(err);
+            console.error('Error fetching or setting user data:', err); 
+            setError(err);
+        } finally {
+            setLoading(false);
         }
-      } else {
-        setLayout(null);
-      }
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, [auth, db]);
+    };
+    
+    loadData();
+  }, [db]);
 
   const updateLayout = useCallback(async (newLayout: BackyardLayout) => {
     setLayout(newLayout);
-    const user = auth.currentUser;
-    if (user) {
-      try {
-        const userDocRef = doc(db, 'users', user.uid);
+    try {
+        const userDocRef = doc(db, 'users', HARDCODED_USER_ID);
         await setDoc(userDocRef, newLayout);
-      } catch (err: any) {
+    } catch (err: any) {
+        console.error("Failed to save layout:", err);
         setError(err);
-      }
-    } else {
-      console.error("Cannot save data: User not signed in.");
     }
-  }, [auth, db]);
+  }, [db]);
 
   const updatePlantPosition = useCallback((plantId: string, newPosition: { x: number; y: number }) => {
     if (!layout) return;
