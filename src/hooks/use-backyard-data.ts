@@ -33,6 +33,7 @@ export function useBackyardData() {
   useEffect(() => {
     const loadData = async () => {
         setLoading(true);
+        setError(null);
         try {
             const userDocRef = doc(db, 'users', HARDCODED_USER_ID);
             const userDocSnap = await getDoc(userDocRef);
@@ -46,6 +47,8 @@ export function useBackyardData() {
         } catch (err: any) {
             console.error('Error fetching or setting user data:', err); 
             setError(err);
+            // Fallback to initial data on error to prevent blank screen
+            setLayout(initialData);
         } finally {
             setLoading(false);
         }
@@ -69,6 +72,7 @@ export function useBackyardData() {
     if (!layout) return;
     const newLayout = structuredClone(layout);
     for (const categoryKey in newLayout) {
+      if (Object.prototype.hasOwnProperty.call(newLayout, categoryKey)) {
         const category = newLayout[categoryKey];
         if (isPlantCategory(category)) {
             const plant = category.plants.find(p => p.id === plantId);
@@ -78,6 +82,7 @@ export function useBackyardData() {
                 return;
             }
         }
+      }
     }
   }, [layout, updateLayout]);
 
@@ -110,6 +115,7 @@ export function useBackyardData() {
     if (!layout) return;
     const newLayout = structuredClone(layout);
     for (const categoryKey in newLayout) {
+       if (Object.prototype.hasOwnProperty.call(newLayout, categoryKey)) {
         const category = newLayout[categoryKey];
         if (isPlantCategory(category)) {
             const initialCount = category.plants.length;
@@ -119,6 +125,7 @@ export function useBackyardData() {
                 return;
             }
         }
+      }
     }
   }, [layout, updateLayout]);
   
@@ -133,25 +140,27 @@ export function useBackyardData() {
     
     const newLayout = structuredClone(layout);
     for (const categoryKey in newLayout) {
-        const category = newLayout[categoryKey];
-        if (isPlantCategory(category)) {
-            const plant = category.plants.find(p => p.id === plantId);
-            if (plant) {
-                // Carry over latest values if not provided in the new record
-                const latestRecord = plant.records[0];
-                if (latestRecord) {
-                    if (newRecord.trunkDiameter === undefined || newRecord.trunkDiameter === '') {
-                        newRecord.trunkDiameter = latestRecord.trunkDiameter;
+        if (Object.prototype.hasOwnProperty.call(newLayout, categoryKey)) {
+            const category = newLayout[categoryKey];
+            if (isPlantCategory(category)) {
+                const plant = category.plants.find(p => p.id === plantId);
+                if (plant) {
+                    // Carry over latest values if not provided in the new record
+                    const latestRecord = plant.records[0];
+                    if (latestRecord) {
+                        if (newRecord.trunkDiameter === undefined || newRecord.trunkDiameter === '') {
+                            newRecord.trunkDiameter = latestRecord.trunkDiameter;
+                        }
+                        if (newRecord.nextScheduledFertilizationDate === undefined || newRecord.nextScheduledFertilizationDate === null) {
+                            newRecord.nextScheduledFertilizationDate = latestRecord.nextScheduledFertilizationDate;
+                        }
                     }
-                    if (newRecord.nextScheduledFertilizationDate === undefined || newRecord.nextScheduledFertilizationDate === null) {
-                        newRecord.nextScheduledFertilizationDate = latestRecord.nextScheduledFertilizationDate;
-                    }
+                    
+                    plant.records.unshift(newRecord);
+                    // No need to sort here as we are using unshift
+                    updateLayout(newLayout);
+                    return;
                 }
-                
-                plant.records.unshift(newRecord);
-                // No need to sort here as we are using unshift
-                updateLayout(newLayout);
-                return;
             }
         }
     }
@@ -164,19 +173,23 @@ export function useBackyardData() {
     const newLayout = structuredClone(layout);
 
     for (const categoryKey in newLayout) {
-        const category = newLayout[categoryKey];
-        if (isPlantCategory(category)) {
-            category.plants.forEach(plant => {
-                if (plantIds.includes(plant.id)) {
-                    const newRecord: PlantRecord = {
-                        ...record,
-                        id: Date.now() + Math.random(), // Add random to avoid collision if processed at same ms
-                        photoDataUri: photoDataUri,
-                    };
-                    plant.records.unshift(newRecord);
-                    // no need to sort here
-                }
-            });
+        if (Object.prototype.hasOwnProperty.call(newLayout, categoryKey)) {
+            const category = newLayout[categoryKey];
+            if (isPlantCategory(category)) {
+                category.plants.forEach(plant => {
+                    if (plantIds.includes(plant.id)) {
+                        const newRecord: PlantRecord = {
+                            ...record,
+                            id: Date.now() + Math.random(), // Add random to avoid collision if processed at same ms
+                            photoDataUri: photoDataUri,
+                            notes: record.notes ?? '',
+                            phLevel: record.phLevel ?? '',
+                            moistureLevel: record.moistureLevel ?? '',
+                        };
+                        plant.records.unshift(newRecord);
+                    }
+                });
+            }
         }
     }
     updateLayout(newLayout);
@@ -193,16 +206,18 @@ export function useBackyardData() {
     }
 
     for (const categoryKey in newLayout) {
-        const category = newLayout[categoryKey];
-        if (isPlantCategory(category)) {
-            const plant = category.plants.find(p => p.id === plantId);
-            if (plant) {
-                const recordIndex = plant.records.findIndex(r => r.id === updatedRecord.id);
-                if (recordIndex !== -1) {
-                    plant.records[recordIndex] = updatedRecord;
-                    plant.records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                    updateLayout(newLayout);
-                    return; // Exit after finding and updating
+        if (Object.prototype.hasOwnProperty.call(newLayout, categoryKey)) {
+            const category = newLayout[categoryKey];
+            if (isPlantCategory(category)) {
+                const plant = category.plants.find(p => p.id === plantId);
+                if (plant) {
+                    const recordIndex = plant.records.findIndex(r => r.id === updatedRecord.id);
+                    if (recordIndex !== -1) {
+                        plant.records[recordIndex] = updatedRecord;
+                        plant.records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                        updateLayout(newLayout);
+                        return; // Exit after finding and updating
+                    }
                 }
             }
         }
@@ -213,15 +228,17 @@ export function useBackyardData() {
     if (!layout) return;
     const newLayout = structuredClone(layout);
     for (const categoryKey in newLayout) {
-        const category = newLayout[categoryKey];
-        if (isPlantCategory(category)) {
-            const plant = category.plants.find(p => p.id === plantId);
-            if (plant) {
-                const initialCount = plant.records.length;
-                plant.records = plant.records.filter(r => r.id !== recordId);
-                if (plant.records.length < initialCount) {
-                    updateLayout(newLayout);
-                    return;
+        if (Object.prototype.hasOwnProperty.call(newLayout, categoryKey)) {
+            const category = newLayout[categoryKey];
+            if (isPlantCategory(category)) {
+                const plant = category.plants.find(p => p.id === plantId);
+                if (plant) {
+                    const initialCount = plant.records.length;
+                    plant.records = plant.records.filter(r => r.id !== recordId);
+                    if (plant.records.length < initialCount) {
+                        updateLayout(newLayout);
+                        return;
+                    }
                 }
             }
         }
@@ -232,6 +249,7 @@ export function useBackyardData() {
     if (!layout) return;
     const newLayout = structuredClone(layout);
     for (const categoryKey in newLayout) {
+       if (Object.prototype.hasOwnProperty.call(newLayout, categoryKey)) {
         const category = newLayout[categoryKey];
         if (isPlantCategory(category)) {
             const plantIndex = category.plants.findIndex(p => p.id === plantId);
@@ -241,6 +259,7 @@ export function useBackyardData() {
                 return;
             }
         }
+      }
     }
   }, [layout, updateLayout]);
 
