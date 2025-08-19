@@ -11,6 +11,10 @@ interface BackyardMapProps {
   onUpdatePlantPosition: (plantId:string, position: { x: number; y: number }) => void;
 }
 
+function isPlantCategory(value: any): value is PlantCategory {
+    return value && typeof value === 'object' && Array.isArray(value.plants);
+}
+
 export function BackyardMap({ layout, selectedPlantIds, onSelectPlant, onUpdatePlantPosition }: BackyardMapProps) {
   const [draggingPlant, setDraggingPlant] = useState<{ id: string; offset: { x: number; y: number } } | null>(null);
   const dragHappened = useRef(false);
@@ -70,66 +74,64 @@ export function BackyardMap({ layout, selectedPlantIds, onSelectPlant, onUpdateP
   };
   
   return (
-    <div
-      className="p-4 md:p-8 flex items-center justify-center h-full w-full"
-    >
-      <div
-        className="relative w-full h-full max-w-[1000px] max-h-[1000px] bg-white shadow-2xl rounded-lg aspect-square"
-      >
+    <div className="p-4 md:p-8 flex items-center justify-center h-full w-full">
+      <div className="relative w-full h-full max-w-[1000px] max-h-[1000px] bg-white shadow-2xl rounded-lg aspect-square">
         <svg
-            ref={svgRef}
-            viewBox="0 0 100 100"
-            className="w-full h-full"
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+          ref={svgRef}
+          viewBox="0 0 100 100"
+          className="w-full h-full"
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
         >
-            <defs>
+          <defs>
             <filter id="dropshadow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur in="SourceAlpha" stdDeviation="0.5" result="blur"/>
-                <feOffset in="blur" dx="0.5" dy="0.5" result="offsetBlur"/>
-                <feMerge>
-                <feMergeNode in="offsetBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-                </feMerge>
+              <feGaussianBlur in="SourceAlpha" stdDeviation="0.5" result="blur" />
+              <feOffset in="blur" dx="0.5" dy="0.5" result="offsetBlur" />
+              <feMerge>
+                <feMergeNode in="offsetBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
             </filter>
-            </defs>
+          </defs>
 
-            <image href="https://i.imgur.com/7wkMw77.png" x="0" y="0" width="100" height="100" />
+          <image href="https://i.imgur.com/7wkMw77.png" x="0" y="0" width="100" height="100" />
 
-            {/* --- THIS IS THE CORRECTED SECTION --- */}
-            {Object.values(layout)
-              .filter((category): category is PlantCategory => 
-                typeof category === 'object' && category !== null && Array.isArray(category.plants)
-              )
-              .map((category) =>
+          {Object.values(layout)
+            .filter(isPlantCategory)
+            .flatMap((category) =>
               category.plants.map((plant) => {
                 const isSelected = selectedPlantIds.includes(plant.id);
                 return (
                   <g
-                  key={plant.id}
-                  transform={`translate(${plant.position.x}, ${plant.position.y})`}
-                  className={cn("cursor-pointer transition-transform duration-200", draggingPlant?.id === plant.id && "cursor-grabbing")}
-                  onMouseDown={(e) => handleMouseDown(e, plant)}
-                  onClick={(e) => handleClick(e, plant.id)}
+                    key={plant.id}
+                    transform={`translate(${plant.position.x}, ${plant.position.y})`}
+                    className={cn(
+                      "cursor-pointer transition-transform duration-200",
+                      draggingPlant?.id === plant.id && "cursor-grabbing"
+                    )}
+                    onMouseDown={(e) => handleMouseDown(e, plant)}
+                    onClick={(e) => handleClick(e, plant.id)}
                   >
-                  <circle
+                    <circle
                       r="2.2"
                       fill={category.color}
                       stroke="white"
                       strokeWidth="0.3"
-                      className={cn("transition-all", isSelected && "stroke-accent" )}
+                      className={cn("transition-all", isSelected && "stroke-accent")}
                       style={{
-                          filter: isSelected ? 'drop-shadow(0 0 1px hsl(var(--accent)))' : 'drop-shadow(0px 1px 1px rgba(0,0,0,0.3))'
+                        filter: isSelected
+                          ? 'drop-shadow(0 0 1px hsl(var(--accent)))'
+                          : 'drop-shadow(0px 1px 1px rgba(0,0,0,0.3))',
                       }}
-                  />
-                  <circle
+                    />
+                    <circle
                       r="2.2"
                       fill="transparent"
                       stroke={isSelected ? 'hsl(var(--accent))' : 'transparent'}
                       strokeWidth="0.5"
-                  />
-                  <text
+                    />
+                    <text
                       x="0"
                       y="0"
                       dy="0.05em"
@@ -139,14 +141,13 @@ export function BackyardMap({ layout, selectedPlantIds, onSelectPlant, onUpdateP
                       fontWeight="bold"
                       fill="white"
                       className="pointer-events-none select-none"
-                  >
+                    >
                       {plant.label}
-                  </text>
+                    </text>
                   </g>
-                )
+                );
               })
             )}
-            {/* --- END OF CORRECTION --- */}
         </svg>
       </div>
     </div>

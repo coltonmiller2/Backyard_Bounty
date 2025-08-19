@@ -17,7 +17,7 @@ import firebaseApp from '@/lib/firebaseConfig';
 
 
 function isPlantCategory(value: any): value is PlantCategory {
-    return value && typeof value === 'object' && 'name' in value && 'color' in value && Array.isArray(value.plants);
+    return value && typeof value === 'object' && value.name && value.color && Array.isArray(value.plants);
 }
 
 const getFilteredLayout = (layout: BackyardLayout | null): Omit<BackyardLayout, 'version'> => {
@@ -59,13 +59,15 @@ export function BackyardPage() {
     }
     const singleSelectedId = selectedPlantIds[0];
     for (const categoryKey in layout) {
-      const category = layout[categoryKey];
-      if (isPlantCategory(category)) {
-          const plant = category.plants.find(p => p.id === singleSelectedId);
-          if (plant) {
-            return { selectedPlant: plant, selectedPlantCategory: category };
-          }
-      }
+        if (key !== 'version') {
+            const category = layout[categoryKey];
+            if (isPlantCategory(category)) {
+                const plant = category.plants.find(p => p.id === singleSelectedId);
+                if (plant) {
+                    return { selectedPlant: plant, selectedPlantCategory: category };
+                }
+            }
+        }
     }
     return { selectedPlant: null, selectedPlantCategory: null };
   }, [selectedPlantIds, layout]);
@@ -149,7 +151,7 @@ export function BackyardPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background font-sans">
+    <div className="flex h-screen flex-col bg-background font-sans overflow-hidden">
       <header className="flex h-14 shrink-0 items-center justify-between border-b bg-background px-4 lg:px-6 z-10">
         <div className="flex items-center gap-2 font-semibold">
           <Leaf className="h-6 w-6 text-primary" />
@@ -191,9 +193,9 @@ export function BackyardPage() {
         </div>
         
         <div className={cn("transition-all duration-300 ease-in-out flex-shrink-0", showRightPanel ? 'w-96' : 'w-0')}>
-            {showDetailsPanel && (
+            {showDetailsPanel && selectedPlant && (
                 <PlantDetailsPanel
-                  plant={selectedPlants[0]}
+                  plant={selectedPlant}
                   category={selectedPlantCategory}
                   onClose={() => handleSelectPlant(null, false)}
                   onAddRecord={handleAddRecord}
