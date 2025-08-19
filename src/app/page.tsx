@@ -2,24 +2,25 @@
 
 import { BackyardPage } from '@/components/backyard-page';
 import firebaseApp from '../lib/firebaseConfig';
-import { getAuth, User, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth'; // Import getAuth and User from firebase/auth
+import { getAuth, User, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, signOut } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const auth = getAuth(firebaseApp); // Get auth instance using getAuth and firebaseApp
+  const auth = getAuth(firebaseApp);
+
   useEffect(() => {
     onAuthStateChanged(auth, (user: User | null) => {
- setUser(user);
+      setUser(user);
       setLoading(false);
     });
-  }, []);
+  }, [auth]);
 
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithRedirect(auth, provider);
     } catch (error) {
       console.error('Error signing in with Google:', error);
     }
@@ -54,4 +55,3 @@ export default function Home() {
     );
   }
 }
-
