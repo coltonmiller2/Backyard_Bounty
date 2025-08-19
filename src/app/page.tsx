@@ -2,7 +2,7 @@
 
 import { BackyardPage } from '@/components/backyard-page';
 import firebaseApp from '../lib/firebaseConfig';
-import { getAuth, User, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
+import { getAuth, User, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 
@@ -12,19 +12,37 @@ export default function Home() {
   const auth = getAuth(firebaseApp);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
-      setUser(user);
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    // First, check for the redirect result
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          // This is the signed-in user
+          setUser(result.user);
+        }
+        // Even if result is null, we continue to the onAuthStateChanged listener
+      })
+      .catch((error) => {
+        // Handle Errors here.
+        console.error('Error getting redirect result:', error);
+      })
+      .finally(() => {
+         // Set up the listener for subsequent auth state changes
+        const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
+          setUser(user);
+          setLoading(false);
+        });
+        return () => unsubscribe();
+      });
   }, [auth]);
 
   const handleLogin = async () => {
+    setLoading(true);
     const provider = new GoogleAuthProvider();
     try {
       await signInWithRedirect(auth, provider);
     } catch (error) {
       console.error('Error signing in with Google:', error);
+      setLoading(false);
     }
   };
 
