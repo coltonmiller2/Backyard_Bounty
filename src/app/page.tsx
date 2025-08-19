@@ -25,13 +25,13 @@ export default function Home() {
         // Handle Errors here.
         console.error('Error getting redirect result:', error);
       })
-      .finally(() => {
+      .finally(() => { // Keep finally for handling the case where getRedirectResult finishes without an error or result
          // Set up the listener for subsequent auth state changes
         const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
           setUser(user);
           setLoading(false);
         });
-        return () => unsubscribe();
+        return () => unsubscribe(); // Clean up the listener
       });
   }, [auth]);
 

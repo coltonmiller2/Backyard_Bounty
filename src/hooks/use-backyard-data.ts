@@ -32,24 +32,25 @@ export function useBackyardData() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
-      if (user) {
+      if (user?.uid) {
         try {
           const userDocRef = doc(db, 'users', user.uid);
           const userDocSnap = await getDoc(userDocRef);
 
           if (userDocSnap.exists()) {
             setLayout(userDocSnap.data() as BackyardLayout);
-          } else {
-            setLayout(initialData);
-            await setDoc(userDocRef, initialData);
+          } else { 
+             await setDoc(userDocRef, initialData);
+             setLayout(initialData);
           }
         } catch (err: any) {
+          console.error('Error fetching or setting user data:', err); 
           setError(err);
         }
       } else {
-        setLayout(null); // User is signed out
+        setLayout(null);
       }
-      setLoading(false); // Set loading to false after auth state is determined and data is potentially loaded
+      setLoading(false);
     });
     return () => unsubscribe();
   }, [auth, db]);

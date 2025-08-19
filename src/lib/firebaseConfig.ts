@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app';
+import { setLogLevel } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyADF4EHFyLVqUJCSJ5OOnMUmUIIQCsN0WU",
@@ -10,5 +11,6 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+setLogLevel('debug');
 
 export default app;
