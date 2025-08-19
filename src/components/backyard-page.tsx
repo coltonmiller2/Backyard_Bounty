@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -56,19 +57,17 @@ export function BackyardPage() {
       return { selectedPlant: null, selectedPlantCategory: null };
     }
     const singleSelectedId = selectedPlantIds[0];
-    for (const categoryKey in layout) {
-        if (key !== 'version') {
-            const category = layout[categoryKey];
-            if (isPlantCategory(category)) {
-                const plant = category.plants.find(p => p.id === singleSelectedId);
-                if (plant) {
-                    return { selectedPlant: plant, selectedPlantCategory: category };
-                }
+    for (const categoryKey in filteredLayout) {
+        const category = filteredLayout[categoryKey];
+        if (isPlantCategory(category)) {
+            const plant = category.plants.find(p => p.id === singleSelectedId);
+            if (plant) {
+                return { selectedPlant: plant, selectedPlantCategory: category };
             }
         }
     }
     return { selectedPlant: null, selectedPlantCategory: null };
-  }, [selectedPlantIds, layout]);
+  }, [selectedPlantIds, layout, filteredLayout]);
 
   const handleSelectPlant = (plantId: string | null, isMultiSelect = false) => {
     if (plantId === null) {
@@ -117,27 +116,6 @@ export function BackyardPage() {
   const showBulkUpdatePanel = selectedPlants.length > 1;
   const showRightPanel = showDetailsPanel || showBulkUpdatePanel;
 
-
-  if (loading || !layout) {
-    return (
-      <div className="flex h-screen w-screen flex-col bg-background font-sans overflow-hidden">
-          <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6 shrink-0 z-10">
-          <div className="flex items-center gap-2 font-semibold">
-            <Leaf className="h-6 w-6 text-primary" />
-            <span>Backyard Bounty</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-10 w-28" />
-            <Skeleton className="h-10 w-28" />
-          </div>
-        </header>
-        <main className="flex-1 relative flex items-center justify-center p-4 md:p-8">
-            <Skeleton className="w-full h-full max-w-[1000px] shadow-2xl rounded-lg"/>
-        </main>
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-screen flex-col bg-background font-sans overflow-hidden">
       <header className="flex h-14 shrink-0 items-center justify-between border-b bg-background px-4 lg:px-6 z-10">
@@ -150,7 +128,7 @@ export function BackyardPage() {
             {viewMode === 'map' ? <Table className="mr-2 h-4 w-4" /> : <Map className="mr-2 h-4 w-4" />}
             {viewMode === 'map' ? 'View Table' : 'View Map'}
             </Button>
-            <Button onClick={() => setAddModalOpen(true)}>
+            <Button onClick={() => setAddModalOpen(true)} disabled={loading}>
             <Plus className="mr-2 h-4 w-4" /> Add Plant
             </Button>
         </div>
@@ -158,7 +136,11 @@ export function BackyardPage() {
       
       <main className="flex flex-1 overflow-hidden">
         <div className={cn("transition-all duration-300 ease-in-out h-full flex-1", showRightPanel ? "w-[calc(100%-24rem)]" : "w-full")}>
-            {viewMode === 'map' ? (
+            {loading ? (
+                <div className="flex items-center justify-center h-full w-full">
+                    <Skeleton className="w-full h-full max-w-[1000px] shadow-2xl rounded-lg aspect-square"/>
+                </div>
+            ) : viewMode === 'map' ? (
                 <BackyardMap
                     layout={filteredLayout}
                     selectedPlantIds={selectedPlantIds}
@@ -201,12 +183,14 @@ export function BackyardPage() {
         </div>
 
       </main>
-      <AddPlantModal
-        isOpen={isAddModalOpen}
-        onClose={() => setAddModalOpen(false)}
-        onAddPlant={addPlant}
-        layout={filteredLayout}
-      />
+      {!loading && layout && (
+        <AddPlantModal
+            isOpen={isAddModalOpen}
+            onClose={() => setAddModalOpen(false)}
+            onAddPlant={addPlant}
+            layout={filteredLayout}
+        />
+      )}
     </div>
   );
 }
