@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { Leaf, Plus, Map, Table } from 'lucide-react';
+import { Leaf, Plus, Map, Table, Download } from 'lucide-react';
+import Papa from 'papaparse';
 import { useBackyardData } from '@/hooks/use-backyard-data';
 import type { Plant, PlantCategory, Record as PlantRecord, BackyardLayout } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -112,6 +113,43 @@ export function BackyardPage() {
     updatePlant(plantId, updates);
   };
 
+  const handleExport = () => {
+    if (!layout) return;
+
+    const allRecords: any[] = [];
+    Object.entries(filteredLayout).forEach(([categoryKey, category]) => {
+        if (isPlantCategory(category)) {
+            category.plants.forEach(plant => {
+                plant.records.forEach(record => {
+                    allRecords.push({
+                        'Category': category.name,
+                        'Plant Label': plant.label,
+                        'Plant Type': plant.type,
+                        'Record Date': record.date,
+                        'Treatment': record.treatment,
+                        'Notes': record.notes,
+                        'pH Level': record.phLevel,
+                        'Moisture Level': record.moistureLevel,
+                        'Trunk Diameter': record.trunkDiameter,
+                        'Next Fertilization': record.nextScheduledFertilizationDate,
+                    });
+                });
+            });
+        }
+    });
+
+    const csv = Papa.unparse(allRecords);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'backyard-bounty-export.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const showDetailsPanel = selectedPlants.length === 1;
   const showBulkUpdatePanel = selectedPlants.length > 1;
   const showRightPanel = showDetailsPanel || showBulkUpdatePanel;
@@ -124,6 +162,9 @@ export function BackyardPage() {
           <span>Backyard Bounty</span>
         </div>
         <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleExport} disabled={loading}>
+              <Download className="mr-2 h-4 w-4" /> Export
+            </Button>
             <Button variant="outline" onClick={() => setViewMode(viewMode === 'map' ? 'table' : 'map')}>
             {viewMode === 'map' ? <Table className="mr-2 h-4 w-4" /> : <Map className="mr-2 h-4 w-4" />}
             {viewMode === 'map' ? 'View Table' : 'View Map'}
@@ -137,7 +178,7 @@ export function BackyardPage() {
       <main className="flex flex-1 overflow-hidden">
         <div className={cn("transition-all duration-300 ease-in-out h-full flex-1", showRightPanel ? "w-[calc(100%-24rem)]" : "w-full")}>
             {loading ? (
-                <div className="flex items-center justify-center h-full w-full">
+                <div className="p-4 md:p-8 flex items-center justify-center h-full w-full">
                     <Skeleton className="w-full h-full max-w-[1000px] shadow-2xl rounded-lg aspect-square"/>
                 </div>
             ) : viewMode === 'map' ? (
