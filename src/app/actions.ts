@@ -6,9 +6,9 @@ export async function getAiSuggestion(input: SuggestTreatmentPlanInput) {
   try {
     const result = await suggestTreatmentPlan(input);
     return { success: true, data: result };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in getAiSuggestion:", error);
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    const errorMessage = error.message || "An unknown error occurred.";
     return { success: false, error: `Failed to get AI suggestion: ${errorMessage}` };
   }
 }
